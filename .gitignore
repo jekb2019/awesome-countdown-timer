@@ -1,0 +1,10 @@
+# my manual
+hidden-manual.md
+
+# dev-only
+/dist
+/node_modules
+
+# misc
+.env
+.DS_Store

@@ -40,12 +40,14 @@ export class CountdownTimer implements ICountdownTimer {
   private startTime: number;
   private currentTime: number;
   private state: CountdownTimerState = 'idle';
+  private disableInvalidStateTransitionError = false;
 
   private onCreate: CountdownTimerEventHandler = () => {};
   private onStart: CountdownTimerEventHandler = () => {};
   private onPause: CountdownTimerEventHandler = () => {};
   private onTick: CountdownTimerEventHandler = () => {};
   private onFinish: CountdownTimerEventHandler = () => {};
+  private onReset: CountdownTimerEventHandler = () => {};
 
   private clearAccurateInterval: Function = null;
 
@@ -56,12 +58,25 @@ export class CountdownTimer implements ICountdownTimer {
       throw new CreateCountdownTimerError(errorMsg);
     }
 
-    const { startTime, onCreate, onStart, onPause, onTick, onFinish } = config;
+    const {
+      startTime,
+      disableInvalidStateTransitionError,
+      onCreate,
+      onStart,
+      onPause,
+      onTick,
+      onFinish,
+      onReset,
+    } = config;
+
     const startTimeInNumber = convertToInteger(startTime);
 
     this.id = nanoid();
     this.currentTime = startTimeInNumber;
     this.startTime = startTime;
+    this.disableInvalidStateTransitionError = Boolean(
+      disableInvalidStateTransitionError
+    );
 
     if (onCreate) {
       this.onCreate = onCreate;
@@ -77,6 +92,9 @@ export class CountdownTimer implements ICountdownTimer {
     }
     if (onFinish) {
       this.onFinish = onFinish;
+    }
+    if (onReset) {
+      this.onReset = onReset;
     }
 
     this.fireEvent('create');
@@ -103,6 +121,10 @@ export class CountdownTimer implements ICountdownTimer {
       }
       case 'finish': {
         handler = this.onFinish;
+        break;
+      }
+      case 'reset': {
+        handler = this.onReset;
         break;
       }
     }
@@ -134,27 +156,25 @@ export class CountdownTimer implements ICountdownTimer {
   private updateState(newState: CountdownTimerState) {
     if (newState === 'running') {
       if (this.state === 'finished' || this.state === 'running') {
-        throw new CountdownTimerInvalidStateTransitionError(
-          this.state,
-          newState
-        );
+        if (!this.disableInvalidStateTransitionError) {
+          throw new CountdownTimerInvalidStateTransitionError(
+            this.state,
+            newState
+          );
+        }
+        return;
       }
     }
 
-    if (newState === 'idle') {
-      throw new CountdownTimerInvalidStateTransitionError(this.state, newState);
-    }
-
     if (newState === 'paused') {
-      if (
-        this.state === 'paused' ||
-        this.state === 'idle' ||
-        this.state === 'finished'
-      ) {
-        throw new CountdownTimerInvalidStateTransitionError(
-          this.state,
-          newState
-        );
+      if (this.state !== 'running') {
+        if (!this.disableInvalidStateTransitionError) {
+          throw new CountdownTimerInvalidStateTransitionError(
+            this.state,
+            newState
+          );
+        }
+        return;
       }
     }
 
@@ -181,14 +201,24 @@ export class CountdownTimer implements ICountdownTimer {
       case 'finish': {
         this.onFinish = handler;
       }
+      case 'reset': {
+        this.onReset = handler;
+      }
     }
   }
 
   startTimer() {
+    // Just for safety - Clear internal timer if already active
+    this.clearInternalTimer();
+
     this.updateState('running');
     this.fireEvent('start');
     this.setInternalTimer(() => {
+      this.currentTime--;
       this.fireEvent('tick');
+      if (this.currentTime === 0) {
+        this.finishTimer();
+      }
     });
     return this;
   }
@@ -202,13 +232,23 @@ export class CountdownTimer implements ICountdownTimer {
 
   finishTimer() {
     this.clearInternalTimer();
+    this.currentTime = 0;
     this.updateState('finished');
     this.fireEvent('finish');
     return this;
   }
 
+  resetTimer() {
+    this.clearInternalTimer();
+    this.currentTime = this.startTime;
+    this.updateState('idle');
+    this.fireEvent('reset');
+    return this;
+  }
+
   getInfo(): CountdownTimerInfo {
     return {
+      id: this.id,
       state: this.state,
       currentTime: this.currentTime,
       startTime: this.startTime,

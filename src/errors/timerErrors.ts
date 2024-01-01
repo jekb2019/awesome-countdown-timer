@@ -24,7 +24,7 @@ export class CountdownTimerInvalidStateTransitionError extends CountdownTimerErr
   constructor(prevState: CountdownTimerState, nextState: CountdownTimerState) {
     super(
       'InvalidStateTransitionError',
-      `Cannot transition from ${prevState} to ${nextState}`
+      `Cannot transition from ${prevState} timer to ${nextState}`
     );
   }
 }

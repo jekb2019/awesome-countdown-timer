@@ -1,1 +1,1 @@
-console.log('Setup webpack, typescript, worker-loader');
+export * from './api/timer';

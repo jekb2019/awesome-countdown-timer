@@ -153,7 +153,7 @@ export class CountdownTimer implements ICountdownTimer {
     }
   }
 
-  private updateState(newState: CountdownTimerState) {
+  private updateState(newState: CountdownTimerState): boolean {
     if (newState === 'running') {
       if (this.state === 'finished' || this.state === 'running') {
         if (!this.disableInvalidStateTransitionError) {
@@ -162,7 +162,7 @@ export class CountdownTimer implements ICountdownTimer {
             newState
           );
         }
-        return;
+        return false;
       }
     }
 
@@ -174,11 +174,12 @@ export class CountdownTimer implements ICountdownTimer {
             newState
           );
         }
-        return;
+        return false;
       }
     }
 
     this.state = newState;
+    return true;
   }
 
   addEventListener(
@@ -211,7 +212,11 @@ export class CountdownTimer implements ICountdownTimer {
     // Just for safety - Clear internal timer if already active
     this.clearInternalTimer();
 
-    this.updateState('running');
+    const isStateUpdated = this.updateState('running');
+    if (!isStateUpdated) {
+      return;
+    }
+
     this.fireEvent('start');
     this.setInternalTimer(() => {
       this.currentTime--;
@@ -225,24 +230,33 @@ export class CountdownTimer implements ICountdownTimer {
 
   pauseTimer() {
     this.clearInternalTimer();
-    this.updateState('paused');
-    this.fireEvent('pause');
+    const isStateUpdated = this.updateState('paused');
+    if (isStateUpdated) {
+      this.fireEvent('pause');
+    }
+
     return this;
   }
 
   finishTimer() {
     this.clearInternalTimer();
-    this.currentTime = 0;
-    this.updateState('finished');
-    this.fireEvent('finish');
+    const isStateUpdated = this.updateState('finished');
+    if (isStateUpdated) {
+      this.currentTime = 0;
+      this.fireEvent('finish');
+    }
+
     return this;
   }
 
   resetTimer() {
     this.clearInternalTimer();
-    this.currentTime = this.startTime;
-    this.updateState('idle');
-    this.fireEvent('reset');
+    const isStateUpdated = this.updateState('idle');
+    if (isStateUpdated) {
+      this.currentTime = this.startTime;
+      this.fireEvent('reset');
+    }
+
     return this;
   }
 

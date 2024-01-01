@@ -8,11 +8,14 @@ import {
 } from '../types/countdownTimer';
 import {
   CountdownTimerEventHandlerError,
+  CountdownTimerInvalidStateTransitionError,
   CreateCountdownTimerError,
 } from '../errors/timerErrors';
 import { convertToInteger, isInteger, isPositiveNumber } from '../util/number';
 import { CountdownTimerState } from '../types/states';
 import { CountdownTimerEventType } from '../types/events';
+import { setAccurateInterval } from '../util/accurateTimer';
+import { ONE_SECOND_IN_MS } from '../constants/time';
 
 function getTimerCreationErrorMessage(config: CountdownTimerConfig) {
   if (!config) {
@@ -43,6 +46,8 @@ export class CountdownTimer implements ICountdownTimer {
   private onPause: CountdownTimerEventHandler = () => {};
   private onTick: CountdownTimerEventHandler = () => {};
   private onFinish: CountdownTimerEventHandler = () => {};
+
+  private clearAccurateInterval: Function = null;
 
   constructor(config: CountdownTimerConfig) {
     const errorMsg = getTimerCreationErrorMessage(config);
@@ -113,6 +118,49 @@ export class CountdownTimer implements ICountdownTimer {
     }
   }
 
+  private setInternalTimer(callback: Function) {
+    this.clearAccurateInterval = setAccurateInterval(
+      callback,
+      ONE_SECOND_IN_MS
+    );
+  }
+
+  private clearInternalTimer() {
+    if (this.clearAccurateInterval) {
+      this.clearAccurateInterval();
+    }
+  }
+
+  private updateState(newState: CountdownTimerState) {
+    if (newState === 'running') {
+      if (this.state === 'finished' || this.state === 'running') {
+        throw new CountdownTimerInvalidStateTransitionError(
+          this.state,
+          newState
+        );
+      }
+    }
+
+    if (newState === 'idle') {
+      throw new CountdownTimerInvalidStateTransitionError(this.state, newState);
+    }
+
+    if (newState === 'paused') {
+      if (
+        this.state === 'paused' ||
+        this.state === 'idle' ||
+        this.state === 'finished'
+      ) {
+        throw new CountdownTimerInvalidStateTransitionError(
+          this.state,
+          newState
+        );
+      }
+    }
+
+    this.state = newState;
+  }
+
   addEventListener(
     type: CountdownTimerEventType,
     handler: CountdownTimerEventHandler
@@ -137,16 +185,24 @@ export class CountdownTimer implements ICountdownTimer {
   }
 
   startTimer() {
+    this.updateState('running');
     this.fireEvent('start');
+    this.setInternalTimer(() => {
+      this.fireEvent('tick');
+    });
     return this;
   }
 
   pauseTimer() {
+    this.clearInternalTimer();
+    this.updateState('paused');
     this.fireEvent('pause');
     return this;
   }
 
   finishTimer() {
+    this.clearInternalTimer();
+    this.updateState('finished');
     this.fireEvent('finish');
     return this;
   }

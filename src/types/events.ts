@@ -2,8 +2,8 @@ import { CountdownTimerInfo } from './countdownTimer';
 
 export type CountdownTimerEventType =
   | 'create'
-  | 'start'
-  | 'pause'
+  | 'start' // Event fired right before countdown timer starts
+  | 'pause' // Event fired right after countdown timer is paused
   | 'finish'
   | 'tick';
 

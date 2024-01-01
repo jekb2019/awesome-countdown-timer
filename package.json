@@ -1,5 +1,5 @@
 {
-  "name": "awesome-timer",
+  "name": "awesome-countdown-timer",
   "version": "0.0.1",
   "description": "An awesome javascript timer",
   "main": "./dist/index.js",

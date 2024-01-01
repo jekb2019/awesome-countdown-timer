@@ -1,1 +1,13 @@
-export type TimerEvent = 'start' | 'pause' | 'finish' | 'destroy' | 'tick';
+import { CountdownTimerInfo } from './countdownTimer';
+
+export type CountdownTimerEventType =
+  | 'create'
+  | 'start'
+  | 'pause'
+  | 'finish'
+  | 'tick';
+
+export type CountdownTimerEvent = {
+  eventType: CountdownTimerEventType;
+  countdownTimerInfo: CountdownTimerInfo;
+};

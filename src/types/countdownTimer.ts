@@ -1,17 +1,27 @@
+import { CountdownTimerEvent, CountdownTimerEventType } from './events';
 import { CountdownTimerState } from './states';
 
 export type TimerID = string;
 
-export interface CountdownTimer {
+export interface ICountdownTimer {
   id: TimerID;
-  startTimer: () => CountdownTimer;
-  pauseTimer: () => CountdownTimer;
-  finishTimer: () => CountdownTimer;
+  addEventListener: (
+    type: CountdownTimerEventType,
+    handler: CountdownTimerEventHandler
+  ) => void;
+  startTimer: () => ICountdownTimer;
+  pauseTimer: () => ICountdownTimer;
+  finishTimer: () => ICountdownTimer;
   getInfo: () => CountdownTimerInfo;
 }
 
 export type CountdownTimerConfig = {
   startTime: number;
+  onCreate?: CountdownTimerEventHandler;
+  onStart?: CountdownTimerEventHandler;
+  onPause?: CountdownTimerEventHandler;
+  onTick?: CountdownTimerEventHandler;
+  onFinish?: CountdownTimerEventHandler;
 };
 
 export type CountdownTimerInfo = {
@@ -19,3 +29,5 @@ export type CountdownTimerInfo = {
   currentTime: number;
   startTime: number;
 };
+
+export type CountdownTimerEventHandler = (event?: CountdownTimerEvent) => void;

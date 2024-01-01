@@ -1,17 +1,22 @@
 import { nanoid } from 'nanoid';
 import {
-  CountdownTimer,
+  ICountdownTimer,
   CountdownTimerConfig,
   CountdownTimerInfo,
   TimerID,
+  CountdownTimerEventHandler,
 } from '../types/countdownTimer';
-import { CreateCountdownTimerError } from '../errors/timerErrors';
+import {
+  CountdownTimerEventHandlerError,
+  CreateCountdownTimerError,
+} from '../errors/timerErrors';
 import { convertToInteger, isInteger, isPositiveNumber } from '../util/number';
 import { CountdownTimerState } from '../types/states';
+import { CountdownTimerEventType } from '../types/events';
 
 function getTimerCreationErrorMessage(config: CountdownTimerConfig) {
   if (!config) {
-    return 'Please provide configuration for timer';
+    return 'CountdownTimerConfig required';
   }
 
   const { startTime } = config;
@@ -27,11 +32,17 @@ function getTimerCreationErrorMessage(config: CountdownTimerConfig) {
   return null;
 }
 
-export class CountdownTimerImpl implements CountdownTimer {
+export class CountdownTimer implements ICountdownTimer {
   readonly id: TimerID;
   private startTime: number;
   private currentTime: number;
   private state: CountdownTimerState = 'idle';
+
+  private onCreate: CountdownTimerEventHandler = () => {};
+  private onStart: CountdownTimerEventHandler = () => {};
+  private onPause: CountdownTimerEventHandler = () => {};
+  private onTick: CountdownTimerEventHandler = () => {};
+  private onFinish: CountdownTimerEventHandler = () => {};
 
   constructor(config: CountdownTimerConfig) {
     const errorMsg = getTimerCreationErrorMessage(config);
@@ -40,26 +51,103 @@ export class CountdownTimerImpl implements CountdownTimer {
       throw new CreateCountdownTimerError(errorMsg);
     }
 
-    const { startTime } = config;
+    const { startTime, onCreate, onStart, onPause, onTick, onFinish } = config;
     const startTimeInNumber = convertToInteger(startTime);
 
     this.id = nanoid();
     this.currentTime = startTimeInNumber;
     this.startTime = startTime;
+
+    if (onCreate) {
+      this.onCreate = onCreate;
+    }
+    if (onStart) {
+      this.onStart = onStart;
+    }
+    if (onPause) {
+      this.onPause = onPause;
+    }
+    if (onTick) {
+      this.onTick = onTick;
+    }
+    if (onFinish) {
+      this.onFinish = onFinish;
+    }
+
+    this.fireEvent('create');
+  }
+
+  private fireEvent(type: CountdownTimerEventType) {
+    let handler: CountdownTimerEventHandler;
+    switch (type) {
+      case 'create': {
+        handler = this.onCreate;
+        break;
+      }
+      case 'start': {
+        handler = this.onStart;
+        break;
+      }
+      case 'pause': {
+        handler = this.onPause;
+        break;
+      }
+      case 'tick': {
+        handler = this.onTick;
+        break;
+      }
+      case 'finish': {
+        handler = this.onFinish;
+        break;
+      }
+    }
+
+    const timerInfo = this.getInfo();
+    try {
+      handler({
+        eventType: type,
+        countdownTimerInfo: timerInfo,
+      });
+    } catch (error) {
+      throw new CountdownTimerEventHandlerError(error);
+    }
+  }
+
+  addEventListener(
+    type: CountdownTimerEventType,
+    handler: CountdownTimerEventHandler
+  ) {
+    switch (type) {
+      case 'create': {
+        this.onCreate = handler;
+      }
+      case 'start': {
+        this.onStart = handler;
+      }
+      case 'pause': {
+        this.onPause = handler;
+      }
+      case 'tick': {
+        this.onTick = handler;
+      }
+      case 'finish': {
+        this.onFinish = handler;
+      }
+    }
   }
 
   startTimer() {
-    console.log('Timer started');
+    this.fireEvent('start');
     return this;
   }
 
   pauseTimer() {
-    console.log('Timer paused');
+    this.fireEvent('pause');
     return this;
   }
 
   finishTimer() {
-    console.log('Timer finished');
+    this.fireEvent('finish');
     return this;
   }
 

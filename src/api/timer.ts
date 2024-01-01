@@ -1,7 +1,7 @@
-import { CountdownTimerImpl } from '../classes/CountdownTimer';
-import { CountdownTimer, CountdownTimerConfig } from '../types/countdownTimer';
+import { CountdownTimer } from '../classes/CountdownTimer';
+import { ICountdownTimer, CountdownTimerConfig } from '../types/countdownTimer';
 
-export function createTimer(config: CountdownTimerConfig) {
-  const timer: CountdownTimer = new CountdownTimerImpl(config);
+export function createCountdownTimer(config: CountdownTimerConfig) {
+  const timer: ICountdownTimer = new CountdownTimer(config);
   return timer;
 }

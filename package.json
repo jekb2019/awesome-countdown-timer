@@ -19,5 +19,6 @@
   },
   "dependencies": {
     "nanoid": "^5.0.4"
-  }
+  },
+  "types": "./dist/src/index.d.ts"
 }

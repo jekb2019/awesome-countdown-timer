@@ -1,6 +1,6 @@
 {
   "name": "awesome-countdown-timer",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "An awesome javascript timer",
   "main": "./dist/index.js",
   "scripts": {

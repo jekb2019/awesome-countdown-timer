@@ -32,6 +32,10 @@ function getTimerCreationErrorMessage(config: CountdownTimerConfig) {
     return 'Countdown timer config requires a non-negative integer `startTime`';
   }
 
+  if (Number(startTime) < 1) {
+    return 'Start time should be greater than 0 seconds';
+  }
+
   return null;
 }
 
